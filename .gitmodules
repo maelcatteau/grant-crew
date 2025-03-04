@@ -1,0 +1,3 @@
+[submodule "crewAI-examples"]
+	path = crewAI-examples
+	url = https://github.com/crewAIInc/crewAI-examples.git
