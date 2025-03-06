@@ -22,6 +22,7 @@ class PoemCrew:
     def poem_writer(self) -> Agent:
         return Agent(
             config=self.agents_config["poem_writer"],
+            llm="gpt-4o-mini",
         )
 
     # To learn more about structured task outputs,

@@ -7,6 +7,18 @@ from crewai.flow import Flow, listen, start
 
 from grant_flow.crews.poem_crew.poem_crew import PoemCrew
 
+from dotenv import load_dotenv
+
+from llama_cloud_services import LlamaParse
+from llama_index.core import SimpleDirectoryReader
+
+
+load_dotenv()
+
+# set up parser
+parser = LlamaParse(
+    result_type="markdown"  # "markdown" and "text" are available
+)
 
 class PoemState(BaseModel):
     sentence_count: int = 1
