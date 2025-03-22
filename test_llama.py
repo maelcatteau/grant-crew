@@ -45,7 +45,7 @@ vector_store = PineconeVectorStore(
 
 # Initialisation du text splitter
 splitter = SemanticSplitterNodeParser(
-    buffer_size=1, breakpoint_percentile_threshold=95, embed_model=embed_model
+    buffer_size=1, breakpoint_percentile_threshold=95, embed_model=embed_model, include_metadata=False
 )
 # Création du pipeline d'ingestion
 pipeline = IngestionPipeline(
