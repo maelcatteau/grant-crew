@@ -1,11 +1,10 @@
 import os
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Document, Settings
-from llama_index.llms.openai import OpenAI
+from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
 from llama_index.embeddings.openai import OpenAIEmbedding
 from dotenv import load_dotenv
 from llama_parse import LlamaParse
 from llama_index.vector_stores.pinecone import PineconeVectorStore
-from llama_index.core.node_parser import SentenceSplitter, SemanticSplitterNodeParser
+from llama_index.core.node_parser import SemanticSplitterNodeParser
 from llama_index.core.ingestion import IngestionPipeline
 import pinecone
 from pinecone import Pinecone
