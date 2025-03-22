@@ -1,29 +1,77 @@
 import os
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Document
+from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Document, Settings
 from llama_index.llms.openai import OpenAI
 from llama_index.embeddings.openai import OpenAIEmbedding
 from dotenv import load_dotenv
+from llama_parse import LlamaParse
+from llama_index.vector_stores.pinecone import PineconeVectorStore
+from llama_index.core.node_parser import SentenceSplitter, SemanticSplitterNodeParser
+from llama_index.core.ingestion import IngestionPipeline
+import pinecone
+from pinecone import Pinecone
 
 
-## Load the API keys from the .env file en vérifiant leur présence
+## Load the variables from the .env file en vérifiant leur présence
 load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 llama_cloud_api_key = os.getenv("LLAMA_CLOUD_API_KEY")
+pinecone_api_key = os.getenv("PINECONE_API_KEY")
+pinecone_environment = os.getenv("PINECONE_ENVIRONMENT")
+pinecone_index_name = os.getenv("PINECONE_INDEX_NAME")
 if not openai_api_key:
     raise ValueError("OPENAI_API_KEY is not set in the .env file")
 if not llama_cloud_api_key:
     raise ValueError("LLAMA_CLOUD_API_KEY is not set in the .env file")
+if not pinecone_api_key:
+    raise ValueError("PINECONE_API_KEY is not set in the .env file")
+if not pinecone_environment:
+    raise ValueError("PINECONE_ENVIRONMENT is not set in the .env file")
+if not pinecone_index_name:
+    raise ValueError("PINECONE_INDEX_NAME is not set in the .env file")
 
-# Exemple simple avec un document en mémoire
-text = "L'auteur a grandi en travaillant sur l'écriture et la programmation. Il a écrit des nouvelles et a également essayé de programmer sur un ordinateur IBM 1401 en utilisant une ancienne version de Fortran."
-documents = [Document(text=text)]
+## Initialisation de la connexion à Pinecone
+pc = Pinecone(api_key=pinecone_api_key)
+embedding_dimension = 1536
 
-llm = OpenAI(api_key=openai_api_key)
-embed_model = OpenAIEmbedding(api_key=openai_api_key)
+## Initialisation du modèle d'embedding avec le choix du modèle
+embed_model = OpenAIEmbedding(api_key=openai_api_key, model="text-embedding-3-small")
 
-index = VectorStoreIndex.from_documents(documents, llm=llm, embed_model=embed_model)
-query_engine = index.as_query_engine()
-query = "Qu'est-ce que l'auteur faisait en grandissant ?"
-response = query_engine.query(query)
-print(f"Question : {query}")
-print(f"Réponse : {response}")
+
+# Initialisation du vector store pinecone
+vector_store = PineconeVectorStore(
+    pinecone_index=pc.Index(pinecone_index_name, environment=pinecone_environment),
+    embedding_dim=embedding_dimension,
+)
+
+# Initialisation du text splitter
+splitter = SemanticSplitterNodeParser(
+    buffer_size=1, breakpoint_percentile_threshold=95, embed_model=embed_model
+)
+# Création du pipeline d'ingestion
+pipeline = IngestionPipeline(
+    transformations=[splitter, embed_model],
+    vector_store=vector_store
+)
+
+##Chargement des données à partir du répertoire data
+reader = SimpleDirectoryReader(
+    input_dir="./data",
+    file_extractor={
+        ".pdf": LlamaParse(
+            api_key=llama_cloud_api_key,
+            result_type="markdown",
+            num_workers=4,
+            verbose=True,
+            language="fr",
+        )
+    }
+)
+documents = reader.load_data()
+
+#Execution du pipeline d'ingestion 
+nodes = pipeline.run(documents=documents)
+print(f"Nombre de noeuds ingérés : {len(nodes)}")
+print(nodes[1].get_content())
+
+# Création de l'index
+index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
